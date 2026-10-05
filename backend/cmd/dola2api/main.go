@@ -176,7 +176,7 @@ func withCORS(next http.Handler) http.Handler {
 		if origin != "" {
 			w.Header().Set("access-control-allow-origin", origin)
 			w.Header().Set("access-control-allow-credentials", "true")
-			w.Header().Set("access-control-allow-headers", "authorization,content-type,x-api-key,x-session-id")
+			w.Header().Set("access-control-allow-headers", "authorization,x-admin-token,content-type,x-api-key,x-session-id")
 			w.Header().Set("access-control-allow-methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS")
 		}
 		if r.Method == http.MethodOptions {

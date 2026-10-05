@@ -42,7 +42,14 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   if (body !== undefined) headers["content-type"] = "application/json";
   if (auth) {
     const token = readToken();
-    if (token) headers.authorization = `Bearer ${token}`;
+    if (token) {
+      // Sent under two names on purpose: some hosting edges consume or strip
+      // Authorization before the request reaches the app (PandaStack's router
+      // does), so the server also accepts X-Admin-Token. Authorization stays
+      // for local dev and the Nginx/systemd deployment.
+      headers.authorization = `Bearer ${token}`;
+      headers["x-admin-token"] = token;
+    }
   }
 
   const response = await fetch(path, {

@@ -90,10 +90,25 @@ func (a *API) guard(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
+// bearer extracts the admin session token from the request.
+//
+// Authorization is tried first so existing clients (and the systemd/Nginx
+// deployment in deploy/) keep working unchanged. The fallbacks exist because
+// some hosting edges consume Authorization for their own purposes or drop it
+// before the request reaches the guest — PandaStack's app router does exactly
+// that, which turns every guarded call into a 401 while login itself still
+// returns 200. The console therefore duplicates the session into
+// X-Admin-Token, and X-Api-Key is accepted last because that is the header
+// such edges are known to forward.
 func bearer(r *http.Request) string {
-	raw := strings.TrimSpace(r.Header.Get("authorization"))
-	if len(raw) > 7 && strings.EqualFold(raw[:7], "bearer ") {
-		return strings.TrimSpace(raw[7:])
+	for _, name := range []string{"authorization", "x-admin-token", "x-api-key"} {
+		raw := strings.TrimSpace(r.Header.Get(name))
+		if len(raw) > 7 && strings.EqualFold(raw[:7], "bearer ") {
+			raw = strings.TrimSpace(raw[7:])
+		}
+		if raw != "" {
+			return raw
+		}
 	}
 	return ""
 }
