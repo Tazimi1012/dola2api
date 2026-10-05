@@ -7,6 +7,7 @@ type DropdownContextValue = {
   open: boolean;
   setOpen: (open: boolean) => void;
   anchor: React.RefObject<HTMLDivElement | null>;
+  content: React.RefObject<HTMLDivElement | null>;
 };
 
 const DropdownContext = React.createContext<DropdownContextValue | null>(null);
@@ -14,11 +15,19 @@ const DropdownContext = React.createContext<DropdownContextValue | null>(null);
 function DropdownMenu({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = React.useState(false);
   const anchor = React.useRef<HTMLDivElement | null>(null);
+  const content = React.useRef<HTMLDivElement | null>(null);
 
   React.useEffect(() => {
     if (!open) return;
+    // The content is portalled to document.body, so it is NOT a DOM descendant
+    // of the anchor. Testing the anchor alone treats a press on a menu item as
+    // an outside click: the menu unmounts during mousedown and the click that
+    // follows has no target left, so every item silently does nothing.
     function onPointerDown(event: MouseEvent): void {
-      if (anchor.current && !anchor.current.contains(event.target as Node)) setOpen(false);
+      const target = event.target as Node | null;
+      if (!target) return;
+      if (anchor.current?.contains(target) || content.current?.contains(target)) return;
+      setOpen(false);
     }
     function onKeyDown(event: KeyboardEvent): void {
       if (event.key === "Escape") setOpen(false);
@@ -32,7 +41,7 @@ function DropdownMenu({ children }: { children: React.ReactNode }) {
   }, [open]);
 
   return (
-    <DropdownContext.Provider value={{ open, setOpen, anchor }}>
+    <DropdownContext.Provider value={{ open, setOpen, anchor, content }}>
       <div ref={anchor} className="relative inline-flex">
         {children}
       </div>
@@ -73,6 +82,7 @@ function DropdownMenuContent({
   if (!context?.open) return null;
   return createPortal(
     <div
+      ref={context.content}
       role="menu"
       className={cn(
         "fixed z-50 min-w-44 overflow-hidden rounded-md border border-border/60 bg-popover p-1 text-popover-foreground shadow-lg animate-in fade-in-0 zoom-in-95",
